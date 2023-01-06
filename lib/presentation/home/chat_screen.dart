@@ -171,7 +171,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void dataHandler(data) {
+  void dataHandler(data) async {
     log('New data');
     // if (kDebugMode) {
     //   print(data);
@@ -190,7 +190,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (kDebugMode) {
         print('Base 64');
-        print(json.decode(utf8.decode(data)));
+        print(utf8.decode(data));
+        print('The lsit');
+        print(utf8.decode(data as List<int>));
+        // ignore: unnecessary_cast
+        final list = utf8.decode(data as List<int>);
+        final parse = list.split(':');
+        print(parse.length);
+        print(parse[0]);
+        print(parse[1]);
+        print(parse[2]);
+        print(parse);
+        //final newData = await jsonDecode(list);
+        print('This section though');
+        print(list);
+        // print(newData);
+        //print(json.decode(utf8.decode(data)) as Map<String, dynamic>);
         //log();
       }
 
