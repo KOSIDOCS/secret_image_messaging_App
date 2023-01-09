@@ -35,6 +35,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final ImagePicker _picker = ImagePicker();
   final streamController = StreamController.broadcast();
   late Socket socket;
+  String imageData = '';
   List<Map<String, dynamic>> messages = [
     {
       'id': 1,
@@ -79,6 +80,10 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     connectToServer();
   }
+
+  // void handleData(Uint8List data, EventSink<String> sink) {
+  //   sink.add(data.);
+  // }
 
   void connectToServer() {
     try {
@@ -154,18 +159,35 @@ class _ChatScreenState extends State<ChatScreen> {
       //   },
       // );
 
+      // var fromByte = StreamTransformer<List<int>, List<int>>.fromHandlers(
+      //     handleData: (data, sink) {
+      //   sink.add(data.buffer.asInt64List());
+      // });
+
+      //   final transform = StreamTransformer<Uint8List, String>.fromBind(
+      // (stream) => stream.transform(utf8.decoder));
+
+      // StreamTransformer doubleTransformer =
+      //     StreamTransformer<Uint8List, String>.fromHandlers(handleData: handleData);
+
       Socket.connect("localhost", 4567).then((Socket sock) {
         socket = sock;
-        socket.listen(dataHandler,
-            onError: errorHandler, onDone: doneHandler, cancelOnError: false);
+        socket
+            .map((uint8list) => uint8list.toList())
+            .transform(const Utf8Decoder())
+            //.transform(const LineSplitter())
+            .listen(dataHandler,
+                onError: errorHandler,
+                onDone: doneHandler,
+                cancelOnError: false);
       }).catchError((e) {
         log("Unable to connect: $e");
         exit(1);
       });
 
-      //Connect standard in to the socket
-      stdin.listen(
-          (data) => socket.write('${String.fromCharCodes(data).trim()}\n'));
+      // //Connect standard in to the socket
+      // stdin.listen(
+      //     (data) => socket.write('${String.fromCharCodes(data).trim()}\n'));
     } catch (e) {
       log(e.toString());
     }
@@ -173,13 +195,61 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void dataHandler(data) async {
     log('New data');
+    log('The data ${data.toString()}');
+    log(data[data.length - 1]);
+
+    // is new sections
+    final lastelement = data[data.length - 1];
+
+    if (lastelement == '}') {
+      setState(() {
+        imageData += data;
+      });
+
+      // final json = jsonDecode(data);
+      final json = jsonDecode(imageData);
+
+      final newMessage = {
+        'id': json['id'] ?? '',
+        'isMe': json['id'] == myChatId,
+        'messageType': json['type'] ?? 'text',
+        'message': json['type'] == 'text'
+            ? json['message']
+            : _getImageBinary(json['message'])
+      };
+
+      if (kDebugMode) {
+        print('Json here $json');
+      }
+
+      setState(() {
+        imageData = '';
+        messages.add(newMessage);
+      });
+    } else {
+      log('Not Image data yet');
+      setState(() {
+        imageData += data;
+      });
+    }
+
+    // end new sections
+    setState(() {});
+
+    if (kDebugMode) {
+      print(data);
+    }
+
+    setState(() {});
     // if (kDebugMode) {
     //   print(data);
     // }
 
     // log(String.fromCharCodes(data).trim());
 
-    final fromString = String.fromCharCodes(data);
+    // final fromString = String.fromCharCodes(data);
+
+    const fromString = '';
 
     if (fromString.contains('Welcome') == false) {
       // if (kDebugMode) {
@@ -188,41 +258,58 @@ class _ChatScreenState extends State<ChatScreen> {
       //   print(String.fromCharCodes(data));
       // }
 
-      if (kDebugMode) {
-        print('Base 64');
-        print(utf8.decode(data));
-        print('The lsit');
-        print(utf8.decode(data as List<int>));
-        // ignore: unnecessary_cast
-        final list = utf8.decode(data as List<int>);
-        final parse = list.split(':');
-        print(parse.length);
-        print(parse[0]);
-        print(parse[1]);
-        print(parse[2]);
-        print(parse);
-        //final newData = await jsonDecode(list);
-        print('This section though');
-        print(list);
-        // print(newData);
-        //print(json.decode(utf8.decode(data)) as Map<String, dynamic>);
-        //log();
-      }
+      List<String> wr = [];
 
-      final decodeEvent = jsonDecode(fromString);
+      // if (kDebugMode) {
+      //   print('Base 64');
+      //   print(utf8.decode(data));
+      //   print('The lsit');
+      //   print(utf8.decode(data as List<int>));
+      //   // ignore: unnecessary_cast
+      //   final list = utf8.decode(data as List<int>);
+      //   final parse = list.split(':');
+      //   print(parse.length);
+      //   print(parse[0]);
+      //   print(parse[1]);
+      //   print(parse[2].split(',')[0]);
+      //   final word = parse[2].substring(1, parse[2].length - 1);
+      //   final word2 = parse[2].split('[');
+      //   wr = word2[1].split(',');
+      //   print('this ${word2.length}, ${wr[wr.length - 1]}');
+      //   print(parse);
+      //   //final newData = await jsonDecode(list);
+      //   print('This section though'); // [137,80,78,71,13,10,26
+      //   print(list);
+      //   // print(newData);
+      //   //print(json.decode(utf8.decode(data)) as Map<String, dynamic>);
+      //   //log();
+      // }
+
+      //final decodeEvent = jsonDecode(fromString);
 
       // json.decode(utf8.decode(data));
 
-      final newMessage = {
-        'id': decodeEvent['id'] ?? '',
-        'isMe': decodeEvent['id'] == myChatId,
-        'messageType': decodeEvent['type'] ?? 'text',
-        'message': decodeEvent['message']
-      };
+      // final newMessage = {
+      //   'id': decodeEvent['id'] ?? '',
+      //   'isMe': decodeEvent['id'] == myChatId,
+      //   'messageType': decodeEvent['type'] ?? 'text',
+      //   'message': decodeEvent['message']
+      // };
 
-      setState(() {
-        messages.add(newMessage);
-      });
+      // log('Data Here ${data.toString()}');
+
+      // log('Saw here $wr');
+
+      // final newMessage = {
+      //   'id': '',
+      //   'isMe': false,
+      //   'messageType': 'image',
+      //   'message': Uint8List.fromList(wr.map(int.parse).toList()),
+      // };
+
+      // setState(() {
+      //   messages.add(newMessage);
+      // });
     }
   }
 
@@ -231,6 +318,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void doneHandler() {
+    log('It\'s done now with you.');
+    if (kDebugMode) {
+      print('done');
+    }
     socket.destroy();
     exit(0);
   }
@@ -240,6 +331,13 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.dispose();
     streamController.close();
     super.dispose();
+  }
+
+  Uint8List _getImageBinary(dynamicList) {
+    List<int> intList =
+        dynamicList.cast<int>().toList(); //This is the magical line.
+    Uint8List data = Uint8List.fromList(intList);
+    return data;
   }
 
   Future<void> pickAndSend() async {
